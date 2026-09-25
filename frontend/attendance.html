@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Attendance</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f6fb; --surface:#ffffff; --border:#e3e7ef; --text:#1a2133; --muted:#6b7280;
+    --primary:#3454d1; --primary-dark:#2a41a8; --success:#1f9d55; --success-bg:#e8f8ee;
+    --danger:#d94141; --danger-bg:#fdeaea; --warn:#c98a12; --warn-bg:#fff6e5;
+    --radius:14px; --shadow:0 2px 10px rgba(20,30,60,0.06);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;-webkit-tap-highlight-color:transparent;}
+  #app{min-height:100vh;display:flex;flex-direction:column;}
+  a{color:inherit;}
+  button{font:inherit;}
+  .hidden{display:none !important;}
+
+  /* ---------- Public page ---------- */
+  .public-wrap{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px 60px;}
+  .public-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);
+    width:100%;max-width:420px;padding:28px 22px;margin-top:24px;}
+  .public-title{font-size:22px;font-weight:700;text-align:center;margin:0 0 4px;letter-spacing:.3px;}
+  .public-sub{text-align:center;color:var(--muted);font-size:14px;margin:0 0 22px;}
+  .role-toggle{display:flex;gap:10px;margin-bottom:18px;}
+  .role-btn{flex:1;padding:16px 8px;border-radius:12px;border:2px solid var(--border);
+    background:#fafbfe;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s;}
+  .role-btn.active{border-color:var(--primary);background:#eef1ff;color:var(--primary-dark);}
+  label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 6px;}
+  input[type=text], select{width:100%;padding:14px;font-size:16px;border-radius:10px;
+    border:1.5px solid var(--border);background:#fff;outline:none;}
+  input[type=text]:focus, select:focus{border-color:var(--primary);}
+  .btn{display:block;width:100%;padding:15px;border-radius:10px;border:none;font-size:16px;
+    font-weight:700;cursor:pointer;text-align:center;transition:.15s;}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-dark);}
+  .btn-primary:disabled{background:#a9b4dd;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--primary);border:1.5px solid var(--border);}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-secondary{background:#eef1f6;color:var(--text);}
+  .mt{margin-top:14px;}
+  .person-preview{background:#f6f8fd;border-radius:10px;padding:14px;margin-top:16px;text-align:center;}
+  .person-preview .name{font-size:18px;font-weight:700;}
+  .person-preview .meta{color:var(--muted);font-size:13px;margin-top:2px;}
+  .alert{padding:12px 14px;border-radius:10px;font-size:14px;margin-top:14px;}
+  .alert-error{background:var(--danger-bg);color:var(--danger);}
+  .alert-warn{background:var(--warn-bg);color:var(--warn);}
+  .success-screen{text-align:center;padding:10px 0 4px;}
+  .success-tick{width:64px;height:64px;border-radius:50%;background:var(--success-bg);color:var(--success);
+    display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 14px;}
+  .success-screen h2{margin:0 0 2px;font-size:15px;color:var(--muted);font-weight:600;}
+  .success-screen .big-name{font-size:22px;font-weight:800;margin:4px 0;}
+  .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;
+    background:#eef1ff;color:var(--primary-dark);margin:6px 4px 0;}
+  .badge.out{background:#fdeeee;color:#b23b3b;}
+  .time-big{font-size:26px;font-weight:800;margin-top:14px;}
+  .date-sm{color:var(--muted);font-size:13px;}
+  .admin-link{text-align:center;margin-top:22px;}
+  .admin-link a{font-size:12px;color:var(--muted);text-decoration:none;}
+  .spinner{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.4);
+    border-top-color:#fff;display:inline-block;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:8px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---------- Admin shell ---------- */
+  .admin-shell{display:flex;min-height:100vh;width:100%;}
+  .sidebar{width:220px;background:#151b2e;color:#dfe3f2;display:flex;flex-direction:column;flex-shrink:0;}
+  .sidebar h1{font-size:16px;padding:22px 18px;margin:0;border-bottom:1px solid #262e47;}
+  .nav-item{padding:13px 20px;font-size:14px;cursor:pointer;color:#b7bedb;border-left:3px solid transparent;}
+  .nav-item:hover{background:#1d2440;color:#fff;}
+  .nav-item.active{background:#1d2440;color:#fff;border-left-color:var(--primary);font-weight:600;}
+  .nav-spacer{flex:1;}
+  .admin-main{flex:1;padding:22px 26px 60px;overflow-x:auto;max-width:100%;}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+  .topbar h2{margin:0;font-size:20px;}
+  .cards-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px;}
+  .stat-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;}
+  .stat-card .num{font-size:26px;font-weight:800;}
+  .stat-card .lbl{color:var(--muted);font-size:12.5px;margin-top:2px;}
+  .panel{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:20px;}
+  .panel h3{margin:0 0 14px;font-size:15px;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:640px;}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px;}
+  .table-wrap{overflow-x:auto;}
+  .status-pill{padding:3px 10px;border-radius:14px;font-size:11.5px;font-weight:700;}
+  .status-pill.ACTIVE{background:var(--success-bg);color:var(--success);}
+  .status-pill.INACTIVE{background:#f0f1f4;color:#888;}
+  .status-pill.IN{background:#eef1ff;color:var(--primary-dark);}
+  .status-pill.OUT{background:#fdeeee;color:#b23b3b;}
+  .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  .filters input, .filters select{width:auto;min-width:130px;padding:9px 10px;font-size:13.5px;}
+  .row-actions button{margin-right:6px;padding:6px 10px;font-size:12px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;}
+  .empty-state{text-align:center;color:var(--muted);padding:30px 10px;font-size:14px;}
+  .pagination{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px;}
+  .pagination button{padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;}
+  .pagination button:disabled{opacity:.4;cursor:not-allowed;}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+  .toast-wrap{position:fixed;top:16px;right:16px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:#151b2e;color:#fff;padding:12px 16px;border-radius:10px;font-size:13.5px;box-shadow:var(--shadow);
+    animation:slidein .2s ease;min-width:220px;}
+  .toast.error{background:var(--danger);}
+  .toast.success{background:var(--success);}
+  @keyframes slidein{from{transform:translateX(20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(10,15,30,.45);display:flex;align-items:center;justify-content:center;z-index:998;padding:16px;}
+  .modal{background:#fff;border-radius:var(--radius);padding:22px;max-width:440px;width:100%;}
+  .modal h3{margin-top:0;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .qr-box{text-align:center;padding:20px;}
+  #qr-canvas-holder{display:inline-block;padding:16px;background:#fff;border-radius:12px;box-shadow:var(--shadow);}
+  .url-box{display:flex;gap:8px;margin:16px auto;max-width:460px;}
+  .url-box input{flex:1;}
+  @media (max-width:760px){
+    .admin-shell{flex-direction:column;}
+    .sidebar{width:100%;flex-direction:row;overflow-x:auto;}
+    .sidebar h1{display:none;}
+    .nav-item{white-space:nowrap;border-left:none;border-bottom:3px solid transparent;}
+    .nav-item.active{border-bottom-color:var(--primary);}
+    .nav-spacer{display:none;}
+    .admin-main{padding:16px;}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+/* ======================= CONFIGURATION - EDIT THESE ======================= */
+const API_BASE_URL = "http://localhost:4000"; // <-- point this at your deployed backend
+const ATTENDANCE_URL_FALLBACK = "https://YOUR-DOMAIN/attendance.html"; // used if /api/qr/config is unreachable
+/* =========================================================================== */
+
+const state = {
+  token: localStorage.getItem("admin_token") || null,
+  admin: null,
+  role: "STUDENT",
+  person: null,
+};
+
+function toast(message, type) {
+  const wrap = document.getElementById("toast-wrap");
+  const el = document.createElement("div");
+  el.className = "toast" + (type ? " " + type : "");
+  el.textContent = message;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+async function apiFetch(path, options = {}) {
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  if (state.token) headers.Authorization = "Bearer " + state.token;
+  let res;
+  try {
+    res = await fetch(API_BASE_URL + path, { ...options, headers });
+  } catch (e) {
+    throw new Error("Could not reach the server. Check your connection and try again.");
+  }
+  const isCsv = res.headers.get("content-type")?.includes("text/csv");
+  if (isCsv) return res;
+  let body = null;
+  try { body = await res.json(); } catch { /* no body */ }
+  if (!res.ok) {
+    const err = new Error((body && body.error) || "Something went wrong.");
+    err.status = res.status;
+    err.details = body && body.details;
+    throw err;
+  }
+  return body;
+}
+
+function logoutAdmin() {
+  state.token = null;
+  state.admin = null;
+  localStorage.removeItem("admin_token");
+  location.hash = "#admin";
+  render();
+}
+
+/* ============================= ROUTER ============================= */
+window.addEventListener("hashchange", render);
+window.addEventListener("DOMContentLoaded", render);
+
+function render() {
+  const hash = location.hash || "";
+  if (hash.startsWith("#admin")) {
+    renderAdmin();
+  } else {
+    renderPublic();
+  }
+}
+
+/* ============================= PUBLIC PAGE ============================= */
+function renderPublic(stage) {
+  stage = stage || (state.__publicStage || "select");
+  state.__publicStage = stage;
+  const app = document.getElementById("app");
+
+  if (stage === "success") {
+    const r = state.__lastRecord;
+    app.innerHTML = `
+      <div class="public-wrap">
+        <div class="public-card">
+          <div class="success-screen">
+            <div class="success-tick">&#10003;</div>
+            <h2>Attendance marked successfully</h2>
+            <div class="big-name">${escapeHtml(r.fullName)}</div>
+            <span class="badge">${r.personType}</span>
+            <span class="badge ${r.attendanceType === "OUT" ? "out" : ""}">${r.attendanceType}</span>
+            <div class="time-big">${r.timeDisplay}</div>
+            <div class="date-sm">${r.dateDisplay}</div>
+            <button class="btn btn-primary mt" id="btn-again">Mark another</button>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById("btn-again").onclick = () => {
+      state.person = null;
+      renderPublic("select");
+    };
+    return;
+  }
+
+  app.innerHTML = `
+    <div class="public-wrap">
+      <div class="public-card">
+        <p class="public-title">Attendance</p>
+        <p class="public-sub">Who are you?</p>
+        <div class="role-toggle">
+          <button class="role-btn ${state.role === "STUDENT" ? "active" : ""}" data-role="STUDENT">Student</button>
+          <button class="role-btn ${state.role === "TEACHER" ? "active" : ""}" data-role="TEACHER">Teacher</button>
+        </div>
+
+        <label for="pid">Enter ID</label>
+        <input type="text" id="pid" placeholder="${state.role === "STUDENT" ? "e.g. STU001" : "e.g. TCH001"}" autocomplete="off" />
+        <button class="btn btn-primary mt" id="btn-verify">Continue</button>
+
+        <div id="verify-error"></div>
+        <div id="person-area"></div>
+
+        <div class="admin-link"><a href="#admin">Admin login</a></div>
+      </div>
+    </div>`;
+
+  document.querySelectorAll(".role-btn").forEach((b) => {
+    b.onclick = () => { state.role = b.dataset.role; state.person = null; renderPublic("select"); };
+  });
+
+  const pidInput = document.getElementById("pid");
+  if (state.__lastId) pidInput.value = state.__lastId;
+
+  document.getElementById("btn-verify").onclick = async () => {
+    const id = pidInput.value.trim();
+    const errBox = document.getElementById("verify-error");
+    errBox.innerHTML = "";
+    if (!id) { errBox.innerHTML = `<div class="alert alert-error">Please enter an ID.</div>`; return; }
+    state.__lastId = id;
+    state.person = null;
+    document.getElementById("person-area").innerHTML = "";
+    const btn = document.getElementById("btn-verify");
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span>Checking...`;
+    try {
+      const data = await apiFetch("/api/attendance/verify", {
+        method: "POST",
+        body: JSON.stringify({ personType: state.role, personId: id }),
+      });
+      state.person = data;
+      renderPersonArea();
+    } catch (e) {
+      errBox.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Continue";
+    }
+  };
+
+  if (state.person) renderPersonArea();
+}
+
+function renderPersonArea() {
+  const area = document.getElementById("person-area");
+  if (!area) return;
+  const p = state.person;
+  area.innerHTML = `
+    <div class="person-preview">
+      <div class="name">${escapeHtml(p.fullName)}</div>
+      <div class="meta">${p.personType} &middot; ${escapeHtml(p.personId)}</div>
+    </div>
+    <label for="atype">Attendance Type</label>
+    <select id="atype">
+      <option value="IN">IN</option>
+      <option value="OUT">OUT</option>
+    </select>
+    <button class="btn btn-primary mt" id="btn-mark">Mark Attendance</button>
+    <div id="mark-error"></div>`;
+
+  document.getElementById("btn-mark").onclick = async () => {
+    const atype = document.getElementById("atype").value;
+    const errBox = document.getElementById("mark-error");
+    errBox.innerHTML = "";
+    const btn = document.getElementById("btn-mark");
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span>Marking...`;
+    try {
+      const data = await apiFetch("/api/attendance/mark", {
+        method: "POST",
+        body: JSON.stringify({ personType: p.personType, personId: p.personId, attendanceType: atype }),
+      });
+      state.__lastRecord = data.record;
+      state.__lastId = "";
+      renderPublic("success");
+    } catch (e) {
+      errBox.innerHTML = `<div class="alert alert-${e.status === 409 ? "warn" : "error"}">${escapeHtml(e.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Mark Attendance";
+    }
+  };
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* ============================= ADMIN ============================= */
+function renderAdmin() {
+  const app = document.getElementById("app");
+  if (!state.token) {
+    app.innerHTML = `
+      <div class="public-wrap">
+        <div class="public-card">
+          <p class="public-title">Admin Login</p>
+          <p class="public-sub">Sign in to manage attendance</p>
+          <label for="au">Username</label>
+          <input type="text" id="au" autocomplete="username" />
+          <label for="ap">Password</label>
+          <input type="text" id="ap" autocomplete="current-password" style="font-family:text-security-disc, sans-serif;" />
+          <button class="btn btn-primary mt" id="btn-login">Log In</button>
+          <div id="login-error"></div>
+          <div class="admin-link"><a href="#">Back to attendance page</a></div>
+        </div>
+      </div>`;
+    document.getElementById("ap").type = "password";
+    document.getElementById("btn-login").onclick = async () => {
+      const username = document.getElementById("au").value.trim();
+      const password = document.getElementById("ap").value;
+      const errBox = document.getElementById("login-error");
+      errBox.innerHTML = "";
+      const btn = document.getElementById("btn-login");
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner"></span>Signing in...`;
+      try {
+        const data = await apiFetch("/api/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });
+        state.token = data.token;
+        state.admin = data.admin;
+        localStorage.setItem("admin_token", data.token);
+        location.hash = "#admin/dashboard";
+        renderAdmin();
+      } catch (e) {
+        errBox.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Log In";
+      }
+    };
+    return;
+  }
+
+  const section = (location.hash.split("/")[1] || "dashboard");
+  const navItems = [
+    ["dashboard", "Dashboard"], ["students", "Students"], ["teachers", "Teachers"],
+    ["attendance", "Attendance"], ["reports", "Reports"], ["qr", "QR Code"],
+  ];
+
+  app.innerHTML = `
+    <div class="admin-shell">
+      <div class="sidebar">
+        <h1>Attendance Admin</h1>
+        ${navItems.map(([key, label]) => `<div class="nav-item ${section === key ? "active" : ""}" data-key="${key}">${label}</div>`).join("")}
+        <div class="nav-spacer"></div>
+        <div class="nav-item" id="nav-logout">Logout</div>
+      </div>
+      <div class="admin-main" id="admin-main"></div>
+    </div>`;
+
+  document.querySelectorAll(".nav-item[data-key]").forEach((el) => {
+    el.onclick = () => { location.hash = "#admin/" + el.dataset.key; };
+  });
+  document.getElementById("nav-logout").onclick = logoutAdmin;
+
+  const main = document.getElementById("admin-main");
+  if (section === "dashboard") renderDashboard(main);
+  else if (section === "students") renderPeople(main, "student");
+  else if (section === "teachers") renderPeople(main, "teacher");
+  else if (section === "attendance") renderAttendance(main);
+  else if (section === "reports") renderReports(main);
+  else if (section === "qr") renderQr(main);
+  else renderDashboard(main);
+}
+
+function handleAuthError(e) {
+  if (e.status === 401) { logoutAdmin(); toast("Session expired. Please log in again.", "error"); return true; }
+  return false;
+}
+
+async function renderDashboard(main) {
+  main.innerHTML = `<div class="topbar"><h2>Dashboard</h2></div><div id="dash-content">Loading...</div>`;
+  try {
+    const [counts, today] = await Promise.all([
+      apiFetch("/api/dashboard"),
+      apiFetch("/api/attendance/today"),
+    ]);
+    const c = document.getElementById("dash-content");
+    c.innerHTML = `
+      <div class="cards-row">
+        <div class="stat-card"><div class="num">${today.summary.total}</div><div class="lbl">Today's Attendance</div></div>
+        <div class="stat-card"><div class="num">${today.summary.studentIn}</div><div class="lbl">Student IN</div></div>
+        <div class="stat-card"><div class="num">${today.summary.studentOut}</div><div class="lbl">Student OUT</div></div>
+        <div class="stat-card"><div class="num">${today.summary.teacherIn}</div><div class="lbl">Teacher IN</div></div>
+        <div class="stat-card"><div class="num">${today.summary.teacherOut}</div><div class="lbl">Teacher OUT</div></div>
+        <div class="stat-card"><div class="num">${counts.activeStudents}</div><div class="lbl">Active Students</div></div>
+        <div class="stat-card"><div class="num">${counts.activeTeachers}</div><div class="lbl">Active Teachers</div></div>
+      </div>
+      <div class="panel">
+        <h3>Recent Attendance</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Name</th><th>ID</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>
+          <tbody>
+            ${today.recent.length ? today.recent.map((r) => `
+              <tr><td>${escapeHtml(r.personName)}</td><td>${escapeHtml(r.personId)}</td>
+              <td>${r.personType}</td>
+              <td><span class="status-pill ${r.attendanceType}">${r.attendanceType}</span></td>
+              <td>${r.attendanceTime}</td></tr>`).join("") : `<tr><td colspan="5" class="empty-state">No attendance marked yet today.</td></tr>`}
+          </tbody>
+        </table></div>
+      </div>`;
+  } catch (e) {
+    if (!handleAuthError(e)) main.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+/* ---- Students / Teachers management (shared logic, `kind` = 'student' | 'teacher') ---- */
+async function renderPeople(main, kind) {
+  const isStudent = kind === "student";
+  const endpoint = isStudent ? "/api/students" : "/api/teachers";
+  const idField = isStudent ? "studentId" : "teacherId";
+  const idLabel = isStudent ? "Student ID" : "Teacher ID";
+  const title = isStudent ? "Students" : "Teachers";
+
+  main.innerHTML = `
+    <div class="topbar"><h2>${title}</h2><button class="btn btn-primary" id="btn-add" style="width:auto;padding:11px 18px;">+ Add ${isStudent ? "Student" : "Teacher"}</button></div>
+    <div class="panel">
+      <div class="filters">
+        <input type="text" id="search" placeholder="Search by name or ID" />
+        <select id="statusFilter"><option value="">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select>
+      </div>
+      <div class="table-wrap" id="people-table">Loading...</div>
+    </div>`;
+
+  async function load() {
+    const q = document.getElementById("search").value.trim();
+    const st = document.getElementById("statusFilter").value;
+    const params = new URLSearchParams();
+    if (q) params.set("search", q);
+    if (st) params.set("status", st);
+    try {
+      const data = await apiFetch(`${endpoint}?${params.toString()}`);
+      const rows = data[isStudent ? "students" : "teachers"];
+      const table = document.getElementById("people-table");
+      if (!rows.length) { table.innerHTML = `<div class="empty-state">No ${title.toLowerCase()} found.</div>`; return; }
+      let timingStates = {};
+      if (isStudent) {
+        const results = await Promise.all(rows.map(async (r) => {
+          try { return [r[idField], await apiFetch(`${endpoint}/${encodeURIComponent(r[idField])}/today-status`)]; }
+          catch { return [r[idField], null]; }
+        }));
+        timingStates = Object.fromEntries(results);
+      }
+      table.innerHTML = `
+        <table><thead><tr><th>${idLabel}</th><th>Name</th><th>Mobile</th><th>Email</th><th>Status</th>${isStudent ? "<th>Attendance Schedule</th><th>Today's Timing Status</th>" : ""}<th></th></tr></thead>
+        <tbody>${rows.map((r) => {
+          const ts = isStudent ? timingStates[r[idField]] : null;
+          const schedule = isStudent
+            ? (r.attendanceStartTime ? `${formatClockDisplay(r.attendanceStartTime)} – ${formatClockDisplay(ts?.windowEnd || addOneHour(r.attendanceStartTime))}` : "No fixed slot")
+            : "";
+          let timingCell = "";
+          if (isStudent) {
+            if (r.status !== "ACTIVE") timingCell = `<span class="status-pill INACTIVE">Inactive</span>`;
+            else if (ts?.overrideGranted) timingCell = `<span class="status-pill ACTIVE">Allow Today</span>`;
+            else if (ts?.timingBlocked) timingCell = `<button data-act="allow" data-id="${escapeHtml(r[idField])}">Allow Today</button>`;
+            else timingCell = `<span class="status-pill ACTIVE">Allowed now</span>`;
+          }
+          return `
+          <tr>
+            <td>${escapeHtml(r[idField])}</td>
+            <td>${escapeHtml(r.fullName)}</td>
+            <td>${escapeHtml(r.mobileNumber)}</td>
+            <td>${escapeHtml(r.email || "-")}</td>
+            <td><span class="status-pill ${r.status}">${r.status}</span></td>
+            ${isStudent ? `<td>${escapeHtml(schedule)}</td><td>${timingCell}</td>` : ""}
+            <td class="row-actions">
+              <button data-act="edit" data-id="${escapeHtml(r[idField])}">Edit</button>
+              <button data-act="toggle" data-id="${escapeHtml(r[idField])}" data-status="${r.status}">${r.status === "ACTIVE" ? "Deactivate" : "Activate"}</button>
+            </td>
+          </tr>`;
+        }).join("")}</tbody></table>`;
+
+      if (isStudent) {
+        table.querySelectorAll("button[data-act=allow]").forEach((b) => {
+          b.onclick = async () => {
+            try {
+              await apiFetch(`${endpoint}/${encodeURIComponent(b.dataset.id)}/allow-today`, { method: "POST", body: JSON.stringify({}) });
+              toast("Allow Today granted for this student.", "success");
+              load();
+            } catch (e) { if (!handleAuthError(e)) toast(e.message, "error"); }
+          };
+        });
+      }
+
+      table.querySelectorAll("button[data-act=edit]").forEach((b) => {
+        b.onclick = () => openPersonModal(kind, endpoint, idField, rows.find((r) => r[idField] === b.dataset.id));
+      });
+      table.querySelectorAll("button[data-act=toggle]").forEach((b) => {
+        b.onclick = async () => {
+          const newStatus = b.dataset.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+          try {
+            await apiFetch(`${endpoint}/${encodeURIComponent(b.dataset.id)}`, { method: "PUT", body: JSON.stringify({ status: newStatus }) });
+            toast(`${title.slice(0, -1)} ${newStatus === "ACTIVE" ? "activated" : "deactivated"}.`, "success");
+            load();
+          } catch (e) { if (!handleAuthError(e)) toast(e.message, "error"); }
+        };
+      });
+    } catch (e) {
+      if (!handleAuthError(e)) document.getElementById("people-table").innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  document.getElementById("search").oninput = debounce(load, 300);
+  document.getElementById("statusFilter").onchange = load;
+  document.getElementById("btn-add").onclick = () => openPersonModal(kind, endpoint, idField, null);
+  load();
+}
+
+function formatClockDisplay(value) {
+  if (!value) return "-";
+  const [h, m] = String(value).split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const displayHour = h % 12 === 0 ? 12 : h % 12;
+  return `${displayHour}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
+function addOneHour(value) {
+  const [h, m, sec = 0] = String(value).split(":").map(Number);
+  const total = (h * 3600 + m * 60 + sec + 3600) % 86400;
+  const hh = Math.floor(total / 3600);
+  const mm = Math.floor((total % 3600) / 60);
+  const ss = total % 60;
+  return [hh, mm, ss].map((v) => String(v).padStart(2, "0")).join(":");
+}
+
+function openPersonModal(kind, endpoint, idField, existing) {
+  const isStudent = kind === "student";
+  const idLabel = isStudent ? "Student ID" : "Teacher ID";
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>${existing ? "Edit" : "Add"} ${isStudent ? "Student" : "Teacher"}</h3>
+      <div class="form-grid">
+        <div>
+          <label>${idLabel}</label>
+          <input type="text" id="m-id" value="${existing ? escapeHtml(existing[idField]) : ""}" ${existing ? "disabled" : ""} />
+        </div>
+        <div>
+          <label>Full Name</label>
+          <input type="text" id="m-name" value="${existing ? escapeHtml(existing.fullName) : ""}" />
+        </div>
+        <div>
+          <label>Mobile Number</label>
+          <input type="text" id="m-mobile" value="${existing ? escapeHtml(existing.mobileNumber) : ""}" />
+        </div>
+        <div>
+          <label>Email (optional)</label>
+          <input type="text" id="m-email" value="${existing ? escapeHtml(existing.email || "") : ""}" />
+        </div>
+        ${isStudent ? `<div>
+          <label>Attendance Start Time</label>
+          <input type="text" id="m-attendance-start" placeholder="HH:MM (e.g. 15:00)" value="${existing ? escapeHtml(existing.attendanceStartTime || "") : ""}" />
+          <div style="color:var(--muted);font-size:12px;margin-top:5px;">Fixed daily 1-hour window. Example: 03:00 PM – 04:00 PM.</div>
+        </div>` : ""}
+      </div>
+      <div id="m-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="m-cancel">Cancel</button>
+        <button class="btn btn-primary" id="m-save">${existing ? "Save Changes" : "Add"}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector("#m-cancel").onclick = () => backdrop.remove();
+
+  backdrop.querySelector("#m-save").onclick = async () => {
+    const payload = {
+      fullName: backdrop.querySelector("#m-name").value.trim(),
+      mobileNumber: backdrop.querySelector("#m-mobile").value.trim(),
+      email: backdrop.querySelector("#m-email").value.trim(),
+    };
+    if (isStudent) {
+      const slotInput = backdrop.querySelector("#m-attendance-start").value.trim();
+      payload.attendanceStartTime = slotInput || null;
+    }
+    if (!existing) payload[idField] = backdrop.querySelector("#m-id").value.trim();
+    const errBox = backdrop.querySelector("#m-error");
+    try {
+      if (existing) {
+        await apiFetch(`${endpoint}/${encodeURIComponent(existing[idField])}`, { method: "PUT", body: JSON.stringify(payload) });
+      } else {
+        await apiFetch(endpoint, { method: "POST", body: JSON.stringify(payload) });
+      }
+      toast("Saved successfully.", "success");
+      backdrop.remove();
+      renderAdmin();
+    } catch (e) {
+      errBox.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+    }
+  };
+}
+
+/* ---- Attendance management ---- */
+let attendancePage = 1;
+async function renderAttendance(main) {
+  main.innerHTML = `
+    <div class="topbar"><h2>Attendance</h2><button class="btn btn-primary" id="btn-manual" style="width:auto;padding:11px 18px;">+ Add Manual Entry</button></div>
+    <div class="panel">
+      <div class="filters">
+        <input type="text" id="f-name" placeholder="Name" />
+        <input type="text" id="f-id" placeholder="ID" />
+        <select id="f-type"><option value="">Student/Teacher</option><option value="STUDENT">Student</option><option value="TEACHER">Teacher</option></select>
+        <select id="f-atype"><option value="">IN/OUT</option><option value="IN">IN</option><option value="OUT">OUT</option></select>
+        <input type="text" id="f-from" placeholder="From date (YYYY-MM-DD)" />
+        <input type="text" id="f-to" placeholder="To date (YYYY-MM-DD)" />
+        <button class="btn btn-secondary" id="f-apply" style="width:auto;">Filter</button>
+      </div>
+      <div class="table-wrap" id="att-table">Loading...</div>
+      <div class="pagination" id="att-pagination"></div>
+    </div>`;
+
+  async function load() {
+    const params = new URLSearchParams({ page: String(attendancePage), pageSize: "20" });
+    const name = document.getElementById("f-name").value.trim();
+    const pid = document.getElementById("f-id").value.trim();
+    const ptype = document.getElementById("f-type").value;
+    const atype = document.getElementById("f-atype").value;
+    const from = document.getElementById("f-from").value.trim();
+    const to = document.getElementById("f-to").value.trim();
+    if (name) params.set("name", name);
+    if (pid) params.set("personId", pid);
+    if (ptype) params.set("personType", ptype);
+    if (atype) params.set("attendanceType", atype);
+    if (from) params.set("fromDate", from);
+    if (to) params.set("toDate", to);
+
+    try {
+      const data = await apiFetch(`/api/attendance?${params.toString()}`);
+      const table = document.getElementById("att-table");
+      if (!data.records.length) { table.innerHTML = `<div class="empty-state">No attendance records match these filters.</div>`; }
+      else {
+        table.innerHTML = `
+          <table><thead><tr><th>Name</th><th>ID</th><th>Type</th><th>In/Out</th><th>Date</th><th>Time</th><th></th></tr></thead>
+          <tbody>${data.records.map((r) => `
+            <tr>
+              <td>${escapeHtml(r.personName)}</td><td>${escapeHtml(r.personId)}</td><td>${r.personType}</td>
+              <td><span class="status-pill ${r.attendanceType}">${r.attendanceType}</span></td>
+              <td>${r.attendanceDate}</td><td>${r.attendanceTime}</td>
+              <td class="row-actions">
+                <button data-act="edit" data-id="${r.id}">Edit</button>
+                <button data-act="del" data-id="${r.id}">Delete</button>
+              </td>
+            </tr>`).join("")}</tbody></table>`;
+        table.querySelectorAll("button[data-act=edit]").forEach((b) => {
+          const rec = data.records.find((r) => String(r.id) === b.dataset.id);
+          b.onclick = () => openCorrectionModal(rec, load);
+        });
+        table.querySelectorAll("button[data-act=del]").forEach((b) => {
+          b.onclick = () => confirmModal("Delete this attendance record? This cannot be undone (an audit log entry will remain).", async () => {
+            try { await apiFetch(`/api/attendance/${b.dataset.id}`, { method: "DELETE" }); toast("Record deleted.", "success"); load(); }
+            catch (e) { if (!handleAuthError(e)) toast(e.message, "error"); }
+          });
+        });
+      }
+      const totalPages = Math.max(1, Math.ceil(data.pagination.total / data.pagination.pageSize));
+      document.getElementById("att-pagination").innerHTML = `
+        <button id="p-prev" ${attendancePage <= 1 ? "disabled" : ""}>&laquo; Prev</button>
+        <span>Page ${attendancePage} of ${totalPages}</span>
+        <button id="p-next" ${attendancePage >= totalPages ? "disabled" : ""}>Next &raquo;</button>`;
+      document.getElementById("p-prev").onclick = () => { attendancePage--; load(); };
+      document.getElementById("p-next").onclick = () => { attendancePage++; load(); };
+    } catch (e) {
+      if (!handleAuthError(e)) document.getElementById("att-table").innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  document.getElementById("f-apply").onclick = () => { attendancePage = 1; load(); };
+  document.getElementById("btn-manual").onclick = () => openManualModal(load);
+  load();
+}
+
+function openCorrectionModal(rec, onDone) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>Correct Attendance</h3>
+      <p style="color:var(--muted);font-size:13px;">${escapeHtml(rec.personName)} &middot; ${escapeHtml(rec.personId)}</p>
+      <div class="form-grid">
+        <div><label>Type</label><select id="c-type"><option ${rec.attendanceType === "IN" ? "selected" : ""}>IN</option><option ${rec.attendanceType === "OUT" ? "selected" : ""}>OUT</option></select></div>
+        <div><label>Date</label><input type="text" id="c-date" value="${rec.attendanceDate}" /></div>
+        <div><label>Time (HH:MM:SS)</label><input type="text" id="c-time" value="${rec.attendanceTime}" /></div>
+      </div>
+      <div id="c-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="c-cancel">Cancel</button>
+        <button class="btn btn-primary" id="c-save">Save Correction</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector("#c-cancel").onclick = () => backdrop.remove();
+  backdrop.querySelector("#c-save").onclick = async () => {
+    try {
+      await apiFetch(`/api/attendance/${rec.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          attendanceType: backdrop.querySelector("#c-type").value,
+          attendanceDate: backdrop.querySelector("#c-date").value.trim(),
+          attendanceTime: backdrop.querySelector("#c-time").value.trim(),
+        }),
+      });
+      toast("Attendance corrected.", "success");
+      backdrop.remove();
+      onDone();
+    } catch (e) {
+      backdrop.querySelector("#c-error").innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+    }
+  };
+}
+
+function openManualModal(onDone) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>Add Manual Attendance</h3>
+      <div class="form-grid">
+        <div><label>Person Type</label><select id="n-ptype"><option value="STUDENT">Student</option><option value="TEACHER">Teacher</option></select></div>
+        <div><label>ID</label><input type="text" id="n-id" /></div>
+        <div><label>Type</label><select id="n-type"><option value="IN">IN</option><option value="OUT">OUT</option></select></div>
+        <div><label>Date (YYYY-MM-DD)</label><input type="text" id="n-date" /></div>
+        <div><label>Time (HH:MM:SS)</label><input type="text" id="n-time" /></div>
+      </div>
+      <div id="n-error"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="n-cancel">Cancel</button>
+        <button class="btn btn-primary" id="n-save">Add</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector("#n-cancel").onclick = () => backdrop.remove();
+  backdrop.querySelector("#n-save").onclick = async () => {
+    try {
+      await apiFetch("/api/attendance/manual", {
+        method: "POST",
+        body: JSON.stringify({
+          personType: backdrop.querySelector("#n-ptype").value,
+          personId: backdrop.querySelector("#n-id").value.trim(),
+          attendanceType: backdrop.querySelector("#n-type").value,
+          attendanceDate: backdrop.querySelector("#n-date").value.trim(),
+          attendanceTime: backdrop.querySelector("#n-time").value.trim(),
+        }),
+      });
+      toast("Manual attendance added.", "success");
+      backdrop.remove();
+      onDone();
+    } catch (e) {
+      backdrop.querySelector("#n-error").innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+    }
+  };
+}
+
+function confirmModal(message, onConfirm) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>Please confirm</h3>
+      <p>${escapeHtml(message)}</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="cf-cancel">Cancel</button>
+        <button class="btn btn-danger" id="cf-yes">Confirm</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector("#cf-cancel").onclick = () => backdrop.remove();
+  backdrop.querySelector("#cf-yes").onclick = () => { backdrop.remove(); onConfirm(); };
+}
+
+/* ---- Reports ---- */
+async function renderReports(main) {
+  main.innerHTML = `
+    <div class="topbar"><h2>Reports</h2></div>
+    <div class="panel">
+      <div class="filters">
+        <input type="text" id="r-from" placeholder="From date (YYYY-MM-DD)" />
+        <input type="text" id="r-to" placeholder="To date (YYYY-MM-DD)" />
+        <select id="r-ptype"><option value="">Student/Teacher</option><option value="STUDENT">Student</option><option value="TEACHER">Teacher</option></select>
+        <select id="r-atype"><option value="">IN/OUT</option><option value="IN">IN</option><option value="OUT">OUT</option></select>
+        <input type="text" id="r-name" placeholder="Name" />
+        <input type="text" id="r-id" placeholder="ID" />
+        <button class="btn btn-secondary" id="r-run" style="width:auto;">Run Report</button>
+        <button class="btn btn-primary" id="r-csv" style="width:auto;">Export CSV</button>
+      </div>
+      <div class="table-wrap" id="r-table"><div class="empty-state">Choose filters and run a report.</div></div>
+    </div>`;
+
+  function params() {
+    const p = new URLSearchParams();
+    const map = { "r-from": "fromDate", "r-to": "toDate", "r-ptype": "personType", "r-atype": "attendanceType", "r-name": "name", "r-id": "personId" };
+    Object.entries(map).forEach(([elId, key]) => {
+      const v = document.getElementById(elId).value.trim();
+      if (v) p.set(key, v);
+    });
+    return p;
+  }
+
+  document.getElementById("r-run").onclick = async () => {
+    try {
+      const data = await apiFetch(`/api/reports/date-range?${params().toString()}`);
+      const table = document.getElementById("r-table");
+      if (!data.records.length) { table.innerHTML = `<div class="empty-state">No records for this filter.</div>`; return; }
+      table.innerHTML = `
+        <table><thead><tr><th>Name</th><th>ID</th><th>Type</th><th>In/Out</th><th>Date</th><th>Time</th></tr></thead>
+        <tbody>${data.records.map((r) => `<tr><td>${escapeHtml(r.personName)}</td><td>${escapeHtml(r.personId)}</td><td>${r.personType}</td><td><span class="status-pill ${r.attendanceType}">${r.attendanceType}</span></td><td>${r.attendanceDate}</td><td>${r.attendanceTime}</td></tr>`).join("")}</tbody></table>`;
+    } catch (e) { if (!handleAuthError(e)) toast(e.message, "error"); }
+  };
+
+  document.getElementById("r-csv").onclick = async () => {
+    try {
+      const res = await apiFetch(`/api/reports/export-csv?${params().toString()}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "attendance_export.csv"; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { if (!handleAuthError(e)) toast(e.message, "error"); }
+  };
+}
+
+/* ---- QR page ---- */
+async function renderQr(main) {
+  main.innerHTML = `<div class="topbar"><h2>QR Code</h2></div><div class="panel qr-box" id="qr-box">Loading...</div>`;
+  let url = ATTENDANCE_URL_FALLBACK;
+  try {
+    const cfg = await apiFetch("/api/qr/config");
+    url = cfg.attendanceUrl || url;
+  } catch (e) { if (handleAuthError(e)) return; }
+
+  const box = document.getElementById("qr-box");
+  box.innerHTML = `
+    <p style="color:var(--muted);font-size:13px;">Permanent Attendance URL</p>
+    <div class="url-box"><input type="text" id="qr-url" value="${escapeHtml(url)}" readonly /><button class="btn btn-secondary" id="qr-copy" style="width:auto;">Copy</button></div>
+    <div id="qr-canvas-holder"></div>
+    <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-secondary" id="qr-download" style="width:auto;">Download QR (PNG)</button>
+      <button class="btn btn-secondary" id="qr-print" style="width:auto;">Print QR</button>
+    </div>
+    <p style="color:var(--muted);font-size:12px;margin-top:14px;max-width:360px;margin-left:auto;margin-right:auto;">
+      This QR code is permanent. Print it once and place it in the classroom/institute -
+      it never needs to change unless the attendance URL itself changes.
+    </p>`;
+
+  new QRCode(document.getElementById("qr-canvas-holder"), { text: url, width: 220, height: 220 });
+
+  document.getElementById("qr-copy").onclick = () => {
+    navigator.clipboard.writeText(url).then(() => toast("URL copied.", "success"));
+  };
+  document.getElementById("qr-download").onclick = () => {
+    setTimeout(() => {
+      const canvas = document.querySelector("#qr-canvas-holder canvas");
+      if (!canvas) return toast("QR not ready yet.", "error");
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = "attendance-qr.png";
+      a.click();
+    }, 50);
+  };
+  document.getElementById("qr-print").onclick = () => window.print();
+}
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+</script>
+</body>
+</html>
