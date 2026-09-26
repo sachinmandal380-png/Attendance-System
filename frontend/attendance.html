@@ -588,7 +588,7 @@ function openPersonModal(kind, endpoint, idField, existing) {
         </div>
         ${isStudent ? `<div>
           <label>Attendance Start Time</label>
-          <input type="text" id="m-attendance-start" placeholder="HH:MM (e.g. 15:00)" value="${existing ? escapeHtml(existing.attendanceStartTime || "") : ""}" />
+          <input type="text" id="m-attendance-start" placeholder="HH:MM AM/PM (e.g. 03:00 PM)" value="${existing ? escapeHtml(existing.attendanceStartTime || "") : ""}" />
           <div style="color:var(--muted);font-size:12px;margin-top:5px;">Fixed daily 1-hour window. Example: 03:00 PM – 04:00 PM.</div>
         </div>` : ""}
       </div>
@@ -600,7 +600,31 @@ function openPersonModal(kind, endpoint, idField, existing) {
     </div>`;
   document.body.appendChild(backdrop);
   backdrop.querySelector("#m-cancel").onclick = () => backdrop.remove();
+function convert12HourTo24Hour(time) {
+  if (!time) return null;
 
+  const match = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+
+  if (!match) {
+    throw new Error("Time must be in format HH:MM AM/PM, e.g. 03:00 PM");
+  }
+
+  let hour = Number(match[1]);
+  const minute = match[2];
+  const period = match[3].toUpperCase();
+
+  if (hour < 1 || hour > 12) {
+    throw new Error("Hour must be between 1 and 12.");
+  }
+
+  if (period === "AM") {
+    if (hour === 12) hour = 0;
+  } else {
+    if (hour !== 12) hour += 12;
+  }
+
+  return `${String(hour).padStart(2, "0")}:${minute}`;
+}
   backdrop.querySelector("#m-save").onclick = async () => {
     const payload = {
       fullName: backdrop.querySelector("#m-name").value.trim(),
@@ -609,7 +633,7 @@ function openPersonModal(kind, endpoint, idField, existing) {
     };
     if (isStudent) {
       const slotInput = backdrop.querySelector("#m-attendance-start").value.trim();
-      payload.attendanceStartTime = slotInput || null;
+      payload.attendanceStartTime = convert12HourTo24Hour(slotInput);
     }
     if (!existing) payload[idField] = backdrop.querySelector("#m-id").value.trim();
     const errBox = backdrop.querySelector("#m-error");
