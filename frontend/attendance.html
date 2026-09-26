@@ -633,7 +633,7 @@ function convert12HourTo24Hour(time) {
     };
     if (isStudent) {
       const slotInput = backdrop.querySelector("#m-attendance-start").value.trim();
-      payload.attendanceStartTime = convert12HourTo24Hour(slotInput);
+      payload.attendanceStartTime = slotInput ? convert12HourTo24Hour(slotInput) : null;
     }
     if (!existing) payload[idField] = backdrop.querySelector("#m-id").value.trim();
     const errBox = backdrop.querySelector("#m-error");
