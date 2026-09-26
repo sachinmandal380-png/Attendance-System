@@ -7,7 +7,7 @@ export interface AdminTokenPayload {
 }
 
 export function signAdminToken(payload: AdminTokenPayload): string {
-  return jwt.sign(payload, env.jwtSecret, { expiresIn: "12h" });
+  return jwt.sign(payload, env.jwtSecret, { expiresIn: "1h" });
 }
 
 export function verifyAdminToken(token: string): AdminTokenPayload {
