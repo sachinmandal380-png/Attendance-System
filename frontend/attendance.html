@@ -601,9 +601,21 @@ function openPersonModal(kind, endpoint, idField, existing) {
   document.body.appendChild(backdrop);
   backdrop.querySelector("#m-cancel").onclick = () => backdrop.remove();
 function convert12HourTo24Hour(time) {
-  if (!time) return null;
+  if (!time || !time.trim()) return null;
 
-  const match = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  const value = time.trim();
+
+  // 24-hour format: 03:00 or 15:00
+  if (/^\d{2}:\d{2}$/.test(value)) {
+    const [hour, minute] = value.split(":").map(Number);
+
+    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+      return value;
+    }
+  }
+
+  // 12-hour format: 03:00 PM
+  const match = value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
 
   if (!match) {
     throw new Error("Time must be in format HH:MM AM/PM, e.g. 03:00 PM");
