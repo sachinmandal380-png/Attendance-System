@@ -687,7 +687,7 @@ function openPersonModal(kind, endpoint, idField, existing) {
 function convert12HourTo24Hour(time) {
   if (!time || !time.trim()) return null;
 
-  const value = time.trim();
+  const value = String(time ?? "").trim().replace(/\s+/g, " ").toUpperCase();
 
   // 24-hour format: 03:00 or 15:00
   if (/^\d{2}:\d{2}$/.test(value)) {
