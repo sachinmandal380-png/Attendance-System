@@ -2,7 +2,6 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { adminNotifications, attendance, students } from "../db/schema";
 import { env } from "../config/env";
-import { sendForgotOutEmail } from "./emailService";
 
 function toMinutes(time: string): number {
   const [hours, minutes] = time.split(":").map(Number);
@@ -108,7 +107,7 @@ export async function checkForgotOutAttendance() {
       `${formatTime12Hour(inRecord.attendanceTime)}, ` +
       `but has not marked OUT by ${formatTime12Hour(expectedOutTime)}.`;
 
-    const [notification] = await db
+    await db
       .insert(adminNotifications)
       .values({
         personType: "STUDENT",
@@ -119,28 +118,6 @@ export async function checkForgotOutAttendance() {
         expectedOutTime,
         message,
       })
-      .returning();
-
-     try {
-  await sendForgotOutEmail({
-    personName: student.fullName,
-    personId: student.studentId,
-    attendanceDate: currentDate,
-    attendanceTime: inRecord.attendanceTime,
-    expectedEndTime: expectedOutTime,
-  });
-
-  await db
-    .update(adminNotifications)
-    .set({
-      emailSentAt: new Date(),
-    })
-    .where(eq(adminNotifications.id, notification.id));
-} catch (error) {
-  console.error(
-    `Failed to send forgot-OUT email for student ${student.studentId}:`,
-    error
-  );
-}
+      .returning()
     }
 }
