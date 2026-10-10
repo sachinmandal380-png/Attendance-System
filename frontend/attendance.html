@@ -371,8 +371,9 @@ function renderAdmin() {
 
   const section = (location.hash.split("/")[1] || "dashboard");
   const navItems = [
-    ["dashboard", "Dashboard"], ["students", "Students"], ["teachers", "Teachers"],
-    ["attendance", "Attendance"], ["reports", "Reports"], ["qr", "QR Code"],
+   ["dashboard", "Dashboard"], ["students", "Students"], ["teachers", "Teachers"],
+["attendance", "Attendance"], ["notifications", "Notifications"],
+["reports", "Reports"], ["qr", "QR Code"],
   ];
 
   app.innerHTML = `
@@ -396,6 +397,7 @@ function renderAdmin() {
   else if (section === "students") renderPeople(main, "student");
   else if (section === "teachers") renderPeople(main, "teacher");
   else if (section === "attendance") renderAttendance(main);
+else if (section === "notifications") renderNotifications(main);
   else if (section === "reports") renderReports(main);
   else if (section === "qr") renderQr(main);
   else renderDashboard(main);
@@ -409,10 +411,11 @@ function handleAuthError(e) {
 async function renderDashboard(main) {
   main.innerHTML = `<div class="topbar"><h2>Dashboard</h2></div><div id="dash-content">Loading...</div>`;
   try {
-    const [counts, today] = await Promise.all([
-      apiFetch("/api/dashboard"),
-      apiFetch("/api/attendance/today"),
-    ]);
+const [counts, today, notificationData] = await Promise.all([
+  apiFetch("/api/dashboard"),
+  apiFetch("/api/attendance/today"),
+  apiFetch("/api/dashboard/notifications"),
+]);
     const c = document.getElementById("dash-content");
     c.innerHTML = `
       <div class="cards-row">
@@ -426,6 +429,36 @@ async function renderDashboard(main) {
       </div>
       <div class="panel">
         <h3>Recent Attendance</h3>
+      <div class="panel">
+        <h3>⚠️ Missing OUT Notifications (<span id="notification-count">${notificationData.count || 0}</span>)</h3>
+        <div class="table-wrap">
+         <table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>ID</th>
+      <th>Date</th>
+      <th>IN Time</th>
+      <th>Expected OUT</th>
+      <th>Actual OUT</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${notificationData.notifications.length ? notificationData.notifications.map((n) => `
+      <tr>
+        <td>${escapeHtml(n.personName)}</td>
+        <td>${escapeHtml(n.personId)}</td>
+        <td>${escapeHtml(n.attendanceDate)}</td>
+        <td>${escapeHtml(n.inTime)}</td>
+        <td>${escapeHtml(n.expectedOutTime)}</td>
+        <td>${n.actualOutTime ? escapeHtml(n.actualOutTime) : "Not marked"}</td>
+        <td>${n.actualOutTime || n.status === "RESOLVED" ? "Resolved" : "Pending"}</td>
+      </tr>`).join("") : `<tr><td colspan="7" class="empty-state">No notifications found.</td></tr>`}
+  </tbody>
+</table>
+        </div>
+      </div>
         <div class="table-wrap"><table>
           <thead><tr><th>Name</th><th>ID</th><th>Type</th><th>Status</th><th>Time</th></tr></thead>
           <tbody>
@@ -441,6 +474,57 @@ async function renderDashboard(main) {
     if (!handleAuthError(e)) main.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
   }
 }
+async function renderNotifications(main) {
+  main.innerHTML = `
+    <div class="topbar"><h2>Notifications</h2></div>
+    <div class="panel">
+      <h3>⚠️ Missing OUT Notifications</h3>
+      <div id="notifications-content">Loading...</div>
+    </div>`;
+
+  try {
+    const data = await apiFetch("/api/dashboard/notifications");
+    const content = document.getElementById("notifications-content");
+
+    content.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>ID</th>
+            <th>Date</th>
+            <th>IN Time</th>
+            <th>Expected OUT</th>
+            <th>Actual OUT</th>
+            <th>Status</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.notifications.length ? data.notifications.map((n) => `
+            <tr>
+              <td>${escapeHtml(n.personName)}</td>
+              <td>${escapeHtml(n.personId)}</td>
+              <td>${escapeHtml(n.attendanceDate)}</td>
+              <td>${escapeHtml(n.inTime)}</td>
+              <td>${escapeHtml(n.expectedOutTime)}</td>
+              <td>${n.actualOutTime ? escapeHtml(n.actualOutTime) : "Not marked"}</td>
+              <td>${n.actualOutTime || n.status === "RESOLVED" ? "Resolved" : "Pending"}</td>
+              <td>${escapeHtml(n.message)}</td>
+            </tr>`).join("") : `
+            <tr><td colspan="8" class="empty-state">No notifications found.</td></tr>`}
+        </tbody>
+      </table></div>`;
+  } catch (e) {
+    if (!handleAuthError(e)) {
+      const content = document.getElementById("notifications-content");
+      if (content) {
+        content.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+      }
+    }
+  }
+}
+
 
 /* ---- Students / Teachers management (shared logic, `kind` = 'student' | 'teacher') ---- */
 async function renderPeople(main, kind) {

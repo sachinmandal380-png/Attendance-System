@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { eq, and, desc, ilike, gte, lte, count } from "drizzle-orm";
 import { db } from "../db";
-import { students, teachers, attendance } from "../db/schema";
+import { students, teachers, attendance, adminNotifications  } from "../db/schema";
 import {
   verifyAttendanceSchema,
   markAttendanceSchema,
@@ -166,7 +166,22 @@ export async function markAttendance(req: Request, res: Response) {
     }
     throw err;
   }
-
+  if (attendanceType === "OUT") {
+    await db
+      .update(adminNotifications)
+      .set({
+        status: "RESOLVED",
+        resolvedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(adminNotifications.personType, personType),
+          eq(adminNotifications.personId, person.id),
+          eq(adminNotifications.attendanceDate, date),
+          eq(adminNotifications.status, "UNREAD")
+        )
+      );
+  }
   res.status(201).json({
     message: "Attendance marked successfully",
     record: {

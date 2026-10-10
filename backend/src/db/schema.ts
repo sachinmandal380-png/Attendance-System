@@ -100,7 +100,40 @@ export const attendanceOverrides = pgTable(
     ),
   })
 );
-
+export const adminNotifications = pgTable(
+  "admin_notifications",
+  {
+    id: serial("id").primaryKey(),
+    personType: varchar("person_type", { length: 20 }).notNull(),
+    personId: varchar("person_id", { length: 50 }).notNull(),
+    personName: varchar("person_name", { length: 150 }).notNull(),
+    attendanceDate: date("attendance_date").notNull(),
+    inTime: time("in_time").notNull(),
+    expectedOutTime: time("expected_out_time").notNull(),
+    message: text("message").notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("UNREAD"),
+    emailSentAt: timestamp("email_sent_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  },
+  (table) => ({
+    personDateUnique: uniqueIndex(
+      "admin_notifications_person_date_unique"
+    ).on(
+      table.personType,
+      table.personId,
+      table.attendanceDate
+    ),
+    statusIdx: index("admin_notifications_status_idx").on(
+      table.status
+    ),
+    dateIdx: index("admin_notifications_date_idx").on(
+      table.attendanceDate
+    ),
+  })
+);
 // No foreign key to `attendance` on purpose: deleting an attendance record
 // must never cascade-delete its audit trail.
 export const auditLogs = pgTable(
