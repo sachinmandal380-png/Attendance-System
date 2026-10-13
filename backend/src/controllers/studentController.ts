@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { eq, ilike, or, and, desc } from "drizzle-orm";
 import { db } from "../db";
-import { students } from "../db/schema";
+import { students, attendance } from "../db/schema";
 import { createStudentSchema, updateStudentSchema, allowTodaySchema } from "../validators/schemas";
 import { ApiError } from "../middleware/errorHandler";
 import { writeAuditLog } from "../utils/audit";
@@ -195,4 +195,64 @@ export async function deleteStudent(req: Request, res: Response) {
   });
 
   res.json({ message: "Student archived (deactivated)." });
+}
+
+export async function getInactiveStudents(req: Request, res: Response) {
+  const thresholdDays = 2;
+  const { date } = nowInTimezone();
+
+  const activeStudents = await db
+    .select({
+      studentId: students.studentId,
+      fullName: students.fullName,
+      mobileNumber: students.mobileNumber,
+      email: students.email,
+    })
+    .from(students)
+    .where(eq(students.status, "ACTIVE"));
+
+  const inRecords = await db
+    .select({
+      personId: attendance.personId,
+      attendanceDate: attendance.attendanceDate,
+    })
+    .from(attendance)
+    .where(
+      and(
+        eq(attendance.personType, "STUDENT"),
+        eq(attendance.attendanceType, "IN")
+      )
+    )
+    .orderBy(desc(attendance.attendanceDate));
+
+  const lastInByStudent = new Map<string, string>();
+
+  for (const record of inRecords) {
+    if (!lastInByStudent.has(record.personId)) {
+      lastInByStudent.set(record.personId, record.attendanceDate);
+    }
+  }
+
+  const dayNumber = (value: string) =>
+    Date.parse(`${value}T00:00:00Z`) / 86400000;
+
+  const todayNumber = dayNumber(date);
+
+  const inactiveStudents = activeStudents.flatMap((student) => {
+    const lastAttendanceDate = lastInByStudent.get(student.studentId);
+
+    if (!lastAttendanceDate) return [];
+
+    const absentDays = todayNumber - dayNumber(lastAttendanceDate);
+
+    return absentDays >= thresholdDays
+      ? [{ ...student, lastAttendanceDate, absentDays }]
+      : [];
+  });
+
+  res.json({
+    thresholdDays,
+    inactiveCount: inactiveStudents.length,
+    students: inactiveStudents,
+  });
 }
