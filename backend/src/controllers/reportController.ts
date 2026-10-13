@@ -127,10 +127,15 @@ export async function dailyReport(req: Request, res: Response) {
 export async function dateRangeReport(req: Request, res: Response) {
   const query = dateRangeSchema.parse(req.query);
   const rows = await getReportRows(query);
+  const emailMap = await getEmailMap(rows);
 
-  res.json({ records: rows });
+  const records = rows.map((row) => ({
+    ...row,
+    email: emailMap.get(`${row.personType}:${row.personId}`) ?? "",
+  }));
+
+  res.json({ records });
 }
-
 async function getEmailMap(rows: AttendanceRow[]) {
   const emailMap = new Map<string, string>();
 
