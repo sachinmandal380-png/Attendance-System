@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { eq, and, gte, lte, ilike, desc } from "drizzle-orm";
+import { eq, and, gte, lte, ilike, desc, or, inArray } from "drizzle-orm";
 import { db } from "../db";
-import { attendance } from "../db/schema";
+import { attendance, students, teachers } from "../db/schema";
 import { dateRangeSchema } from "../validators/schemas";
 import { nowInTimezone } from "../utils/timezone";
 
