@@ -953,48 +953,109 @@ async function renderReports(main) {
       <div class="filters">
         <input type="text" id="r-from" placeholder="From date (YYYY-MM-DD)" />
         <input type="text" id="r-to" placeholder="To date (YYYY-MM-DD)" />
-        <select id="r-ptype"><option value="">Student/Teacher</option><option value="STUDENT">Student</option><option value="TEACHER">Teacher</option></select>
-        <select id="r-atype"><option value="">IN/OUT</option><option value="IN">IN</option><option value="OUT">OUT</option></select>
+        <select id="r-ptype">
+          <option value="">Student/Teacher</option>
+          <option value="STUDENT">Student</option>
+          <option value="TEACHER">Teacher</option>
+        </select>
+        <select id="r-atype">
+          <option value="">IN/OUT</option>
+          <option value="IN">IN</option>
+          <option value="OUT">OUT</option>
+        </select>
         <input type="text" id="r-name" placeholder="Name" />
         <input type="text" id="r-id" placeholder="ID" />
+        <input type="email" id="r-email" placeholder="Email" />
         <button class="btn btn-secondary" id="r-run" style="width:auto;">Search</button>
         <button class="btn btn-primary" id="r-csv" style="width:auto;">Export CSV</button>
       </div>
-      <div class="table-wrap" id="r-table"><div class="empty-state">Choose filters and run a report.</div></div>
+      <div class="table-wrap" id="r-table">
+        <div class="empty-state">Choose filters and click Search.</div>
+      </div>
     </div>`;
 
   function params() {
     const p = new URLSearchParams();
-    const map = { "r-from": "fromDate", "r-to": "toDate", "r-ptype": "personType", "r-atype": "attendanceType", "r-name": "name", "r-id": "personId" };
+    const map = {
+      "r-from": "fromDate",
+      "r-to": "toDate",
+      "r-ptype": "personType",
+      "r-atype": "attendanceType",
+      "r-name": "name",
+      "r-id": "personId",
+      "r-email": "email"
+    };
+
     Object.entries(map).forEach(([elId, key]) => {
       const v = document.getElementById(elId).value.trim();
       if (v) p.set(key, v);
     });
+
     return p;
   }
 
   document.getElementById("r-run").onclick = async () => {
     try {
-      const data = await apiFetch(`/api/reports/date-range?${params().toString()}`);
+      const data = await apiFetch(
+        `/api/reports/date-range?${params().toString()}`
+      );
       const table = document.getElementById("r-table");
-      if (!data.records.length) { table.innerHTML = `<div class="empty-state">No records for this filter.</div>`; return; }
+
+      if (!data.records.length) {
+        table.innerHTML = `<div class="empty-state">No records for this filter.</div>`;
+        return;
+      }
+
       table.innerHTML = `
-        <table><thead><tr><th>Name</th><th>ID</th><th>Type</th><th>In/Out</th><th>Date</th><th>Time</th></tr></thead>
-        <tbody>${data.records.map((r) => `<tr><td>${escapeHtml(r.personName)}</td><td>${escapeHtml(r.personId)}</td><td>${r.personType}</td><td><span class="status-pill ${r.attendanceType}">${r.attendanceType}</span></td><td>${r.attendanceDate}</td><td>${r.attendanceTime}</td></tr>`).join("")}</tbody></table>`;
-    } catch (e) { if (!handleAuthError(e)) toast(e.message, "error"); }
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Type</th>
+              <th>In/Out</th>
+              <th>Date</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.records.map((r) => `
+              <tr>
+                <td>${escapeHtml(r.personName)}</td>
+                <td>${escapeHtml(r.personId)}</td>
+                <td>${escapeHtml(r.email ?? "")}</td>
+                <td>${escapeHtml(r.personType)}</td>
+                <td><span class="status-pill ${r.attendanceType}">${escapeHtml(r.attendanceType)}</span></td>
+                <td>${escapeHtml(r.attendanceDate)}</td>
+                <td>${escapeHtml(r.attendanceTime)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>`;
+    } catch (e) {
+      if (!handleAuthError(e)) toast(e.message, "error");
+    }
   };
 
   document.getElementById("r-csv").onclick = async () => {
     try {
-      const res = await apiFetch(`/api/reports/export-csv?${params().toString()}`);
+      const res = await apiFetch(
+        `/api/reports/export-csv?${params().toString()}`
+      );
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = "attendance_export.csv"; a.click();
+      a.href = url;
+      a.download = "attendance_export.csv";
+      a.click();
       URL.revokeObjectURL(url);
-    } catch (e) { if (!handleAuthError(e)) toast(e.message, "error"); }
+    } catch (e) {
+      if (!handleAuthError(e)) toast(e.message, "error");
+    }
   };
 }
+
 
 /* ---- QR page ---- */
 async function renderQr(main) {
