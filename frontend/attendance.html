@@ -726,31 +726,46 @@ function convert12HourTo24Hour(time) {
 
   return `${String(hour).padStart(2, "0")}:${minute}`;
 }
-  backdrop.querySelector("#m-save").onclick = async () => {
+  
+backdrop.querySelector("#m-save").onclick = async () => {
+  const errBox = backdrop.querySelector("#m-error");
+  errBox.innerHTML = "";
+
+  try {
     const payload = {
       fullName: backdrop.querySelector("#m-name").value.trim(),
       mobileNumber: backdrop.querySelector("#m-mobile").value.trim(),
       email: backdrop.querySelector("#m-email").value.trim(),
     };
+
     if (isStudent) {
       const slotInput = backdrop.querySelector("#m-attendance-start").value.trim();
-      payload.attendanceStartTime = slotInput ? convert12HourTo24Hour(slotInput) : null;
+      payload.attendanceStartTime = slotInput
+        ? convert12HourTo24Hour(slotInput)
+        : null;
     }
-    if (!existing) payload[idField] = backdrop.querySelector("#m-id").value.trim();
-    const errBox = backdrop.querySelector("#m-error");
-    try {
-      if (existing) {
-        await apiFetch(`${endpoint}/${encodeURIComponent(existing[idField])}`, { method: "PUT", body: JSON.stringify(payload) });
-      } else {
-        await apiFetch(endpoint, { method: "POST", body: JSON.stringify(payload) });
-      }
-      toast("Saved successfully.", "success");
-      backdrop.remove();
-      renderAdmin();
-    } catch (e) {
-      errBox.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+
+    if (!existing) {
+      payload[idField] = backdrop.querySelector("#m-id").value.trim();
     }
-  };
+
+    const url = existing
+      ? `${endpoint}/${encodeURIComponent(existing[idField])}`
+      : endpoint;
+
+    await apiFetch(url, {
+      method: existing ? "PUT" : "POST",
+      body: JSON.stringify(payload),
+    });
+
+    toast("Saved successfully.", "success");
+    backdrop.remove();
+    renderAdmin();
+  } catch (e) {
+    errBox.innerHTML =
+      `<div class="alert alert-error">${escapeHtml(e.message || "Unable to save changes.")}</div>`;
+  }
+};
 }
 
 /* ---- Attendance management ---- */
