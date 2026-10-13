@@ -672,7 +672,12 @@ function openPersonModal(kind, endpoint, idField, existing) {
         </div>
         ${isStudent ? `<div>
           <label>Attendance Start Time</label>
-          <input type="text" id="m-attendance-start" placeholder="HH:MM AM/PM (e.g. 03:00 PM)" value="${existing ? escapeHtml(existing.attendanceStartTime || "") : ""}" />
+          <input
+  type="text"
+  id="m-attendance-start"
+  placeholder="HH:MM AM/PM (e.g. 03:00 PM)"
+  value="${existing ? formatClockDisplay(existing.attendanceStartTime || "") : ""}"
+/>
           <div style="color:var(--muted);font-size:12px;margin-top:5px;">Fixed daily 1-hour window. Example: 03:00 PM – 04:00 PM.</div>
         </div>` : ""}
       </div>
