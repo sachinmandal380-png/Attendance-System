@@ -75,6 +75,7 @@ export const dateRangeSchema = z.object({
   attendanceType: z.enum(["IN", "OUT"]).optional(),
   name: z.string().optional(),
   personId: z.string().optional(),
+  email: z.string().optional(),
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(200).optional(),
 });
