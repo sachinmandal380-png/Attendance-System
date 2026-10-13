@@ -7,6 +7,7 @@ import {
   deleteStudent,
   allowStudentToday,
   todayStudentStatus,
+  getInactiveStudents,
 } from "../controllers/studentController";
 import { asyncHandler } from "../middleware/errorHandler";
 import { requireAdmin } from "../middleware/auth";
@@ -16,6 +17,7 @@ router.use(requireAdmin);
 
 router.get("/", asyncHandler(listStudents));
 router.post("/", asyncHandler(createStudent));
+router.get("/inactive", asyncHandler(getInactiveStudents));
 router.get("/:id", asyncHandler(getStudent));
 router.put("/:id", asyncHandler(updateStudent));
 router.post("/:id/allow-today", asyncHandler(allowStudentToday));
