@@ -373,6 +373,7 @@ function renderAdmin() {
   const navItems = [
    ["dashboard", "Dashboard"], ["students", "Students"], ["teachers", "Teachers"],
 ["attendance", "Attendance"], ["notifications", "Notifications"],
+ ["student-inactivity", "Student Inactivity"],
 ["reports", "Reports"], ["qr", "QR Code"],
   ];
 
@@ -398,6 +399,7 @@ function renderAdmin() {
   else if (section === "teachers") renderPeople(main, "teacher");
   else if (section === "attendance") renderAttendance(main);
 else if (section === "notifications") renderNotifications(main);
+  else if (section === "student-inactivity") renderStudentInactivity(main);
   else if (section === "reports") renderReports(main);
   else if (section === "qr") renderQr(main);
   else renderDashboard(main);
@@ -1054,6 +1056,72 @@ async function renderReports(main) {
       if (!handleAuthError(e)) toast(e.message, "error");
     }
   };
+}
+
+async function renderStudentInactivity(main) {
+  main.innerHTML = `
+    <div class="topbar">
+      <h2>Student Inactivity</h2>
+      <p>Students who have not attended for 2 or more days.</p>
+    </div>
+    <div class="panel" id="inactivity-table">
+      <div class="empty-state">Loading students...</div>
+    </div>
+  `;
+
+  const table = document.getElementById("inactivity-table");
+
+  try {
+    const data = await apiFetch("/api/students/inactive");
+    const students = data.students || [];
+
+    if (students.length === 0) {
+      table.innerHTML = `
+        <div class="empty-state">
+          No inactive students found.
+        </div>
+      `;
+      return;
+    }
+
+    table.innerHTML = `
+      <p><strong>Total inactive students:</strong> ${students.length}</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student Name</th>
+              <th>Student ID</th>
+              <th>Mobile</th>
+              <th>Email</th>
+              <th>Last IN Date</th>
+              <th>Days Absent</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${students.map((student) => `
+              <tr>
+                <td>${escapeHtml(student.fullName || "")}</td>
+                <td>${escapeHtml(student.studentId || "")}</td>
+                <td>${escapeHtml(student.mobileNumber || "")}</td>
+                <td>${escapeHtml(student.email || "")}</td>
+                <td>${escapeHtml(student.lastAttendanceDate || "")}</td>
+                <td>${escapeHtml(String(student.absentDays ?? ""))}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    if (!handleAuthError(e)) {
+      table.innerHTML = `
+        <div class="empty-state">
+          ${escapeHtml(e.message || "Failed to load inactive students.")}
+        </div>
+      `;
+    }
+  }
 }
 
 
