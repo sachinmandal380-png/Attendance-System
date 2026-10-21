@@ -416,7 +416,6 @@ async function renderDashboard(main) {
 const [counts, today, notificationData] = await Promise.all([
   apiFetch("/api/dashboard"),
   apiFetch("/api/attendance/today"),
-  apiFetch("/api/dashboard/notifications"),
 ]);
     const c = document.getElementById("dash-content");
     c.innerHTML = `
@@ -431,9 +430,7 @@ const [counts, today, notificationData] = await Promise.all([
       </div>
       <div class="panel">
         <h3>Recent Attendance</h3>
-      <div class="panel">
-        <h3>⚠️ Missing OUT Notifications (<span id="notification-count">${notificationData.count || 0}</span>)</h3>
-        <div class="table-wrap">
+      <div class="table-wrap">
          <table>
   <thead>
     <tr>
