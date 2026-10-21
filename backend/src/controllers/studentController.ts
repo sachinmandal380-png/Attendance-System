@@ -11,15 +11,25 @@ import { attendanceOverrides } from "../db/schema";
 export async function listStudents(req: Request, res: Response) {
   const search = (req.query.search as string | undefined)?.trim();
   const status = req.query.status as string | undefined;
+  const email = (req.query.email as string | undefined)?.trim();
 
   const conditions = [];
+
   if (search) {
     conditions.push(
-      or(ilike(students.fullName, `%${search}%`), ilike(students.studentId, `%${search}%`))
+      or(
+        ilike(students.fullName, `%${search}%`),
+        ilike(students.studentId, `%${search}%`)
+      )
     );
   }
+
   if (status === "ACTIVE" || status === "INACTIVE") {
     conditions.push(eq(students.status, status));
+  }
+
+  if (email) {
+    conditions.push(ilike(students.email, `%${email}%`));
   }
 
   const rows = await db
