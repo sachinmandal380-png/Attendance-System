@@ -413,7 +413,7 @@ function handleAuthError(e) {
 async function renderDashboard(main) {
   main.innerHTML = `<div class="topbar"><h2>Dashboard</h2></div><div id="dash-content">Loading...</div>`;
   try {
-const [counts, today, notificationData] = await Promise.all([
+const [counts, today] = await Promise.all([
   apiFetch("/api/dashboard"),
   apiFetch("/api/attendance/today"),
 ]);
