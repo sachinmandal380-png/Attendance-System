@@ -484,20 +484,30 @@ async function renderPeople(main, kind) {
 
   main.innerHTML = `
     <div class="topbar"><h2>${title}</h2><button class="btn btn-primary" id="btn-add" style="width:auto;padding:11px 18px;">+ Add ${isStudent ? "Student" : "Teacher"}</button></div>
-    <div class="panel">
-      <div class="filters">
-        <input type="text" id="search" placeholder="Search by name or ID" />
-        <select id="statusFilter"><option value="">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select>
-      </div>
+    <div class="panel">  
+<div class="filters">
+  <input type="text" id="search" placeholder="Search by name or ID" />
+  ${isStudent ? '<input type="email" id="emailFilter" placeholder="Search by email" />' : ""}
+  <select id="statusFilter">
+    <option value="">All statuses</option>
+    <option value="ACTIVE">Active</option>
+    <option value="INACTIVE">Inactive</option>
+  </select>
+  <button class="btn btn-secondary" id="btn-search" type="button" style="width:auto;">Search</button>
+</div>
       <div class="table-wrap" id="people-table">Loading...</div>
     </div>`;
 
   async function load() {
     const q = document.getElementById("search").value.trim();
     const st = document.getElementById("statusFilter").value;
+    const email = isStudent
+  ? document.getElementById("emailFilter").value.trim()
+  : "";
     const params = new URLSearchParams();
     if (q) params.set("search", q);
     if (st) params.set("status", st);
+    if (email) params.set("email", email);
     try {
       const data = await apiFetch(`${endpoint}?${params.toString()}`);
       const rows = data[isStudent ? "students" : "teachers"];
@@ -570,10 +580,26 @@ async function renderPeople(main, kind) {
     }
   }
 
-  document.getElementById("search").oninput = debounce(load, 300);
-  document.getElementById("statusFilter").onchange = load;
-  document.getElementById("btn-add").onclick = () => openPersonModal(kind, endpoint, idField, null);
-  load();
+document.getElementById("search").oninput = debounce(load, 300);
+document.getElementById("statusFilter").onchange = load;
+
+const searchButton = document.getElementById("btn-search");
+searchButton.onclick = load;
+
+if (isStudent) {
+  document.getElementById("emailFilter").onkeydown = (e) => {
+    if (e.key === "Enter") load();
+  };
+}
+
+document.getElementById("search").onkeydown = (e) => {
+  if (e.key === "Enter") load();
+};
+
+document.getElementById("btn-add").onclick = () =>
+  openPersonModal(kind, endpoint, idField, null);
+
+load();
 }
 
 function formatClockDisplay(value) {
