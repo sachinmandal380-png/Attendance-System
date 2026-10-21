@@ -26,10 +26,13 @@ const personBase = {
 export const createStudentSchema = z.object({
   studentId: z.string().min(1, "Student ID is required."),
   ...personBase,
+  seniorName: z.string().trim().max(255).nullable().optional(),
   attendanceStartTime: attendanceStartTimeSchema.nullable().optional(),
 });
+
 export const updateStudentSchema = z.object({
   ...personBase,
+  seniorName: z.string().trim().max(255).nullable().optional(),
   attendanceStartTime: attendanceStartTimeSchema.nullable().optional(),
 }).partial();
 
