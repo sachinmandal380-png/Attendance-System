@@ -69,6 +69,7 @@ export async function createStudent(req: Request, res: Response) {
       fullName: data.fullName,
       mobileNumber: data.mobileNumber,
       email: data.email,
+      seniorName: data.seniorName ?? null,
       status: data.status ?? "ACTIVE",
       attendanceStartTime: data.attendanceStartTime ?? null,
     })
