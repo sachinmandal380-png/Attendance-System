@@ -31,6 +31,7 @@ export const students = pgTable("students", {
   fullName: varchar("full_name", { length: 255 }).notNull(),
   mobileNumber: varchar("mobile_number", { length: 20 }).notNull(),
   email: varchar("email", { length: 255 }),
+  seniorName: varchar("senior_name", { length: 255 }),
   status: statusEnum("status").notNull().default("ACTIVE"),
   attendanceStartTime: time("attendance_start_time"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
