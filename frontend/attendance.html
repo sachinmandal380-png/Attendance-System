@@ -602,16 +602,18 @@ if (isStudent) {
   document.getElementById("emailFilter").onkeydown = (e) => {
     if (e.key === "Enter") load();
   };
-}
-document.getElementById("seniorNameFilter").oninput = debounce(load, 300);
 
-document.getElementById("seniorNameFilter").onkeydown = (e) => {
-  if (e.key === "Enter") load();
-};
+  document.getElementById("seniorNameFilter").oninput = debounce(load, 300);
+
+  document.getElementById("seniorNameFilter").onkeydown = (e) => {
+    if (e.key === "Enter") load();
+  };
+}
+
 document.getElementById("search").onkeydown = (e) => {
   if (e.key === "Enter") load();
 };
-
+  
 document.getElementById("btn-add").onclick = () =>
   openPersonModal(kind, endpoint, idField, null);
 if (isStudent) {
@@ -620,11 +622,13 @@ if (isStudent) {
       const q = document.getElementById("search").value.trim();
       const st = document.getElementById("statusFilter").value;
       const email = document.getElementById("emailFilter").value.trim();
+      const seniorName = document.getElementById("seniorNameFilter").value.trim();
 
       const params = new URLSearchParams();
       if (q) params.set("search", q);
       if (st) params.set("status", st);
       if (email) params.set("email", email);
+      if (seniorName) params.set("seniorName", seniorName);
 
       const data = await apiFetch(`/api/students?${params.toString()}`);
       const rows = data.students || [];
