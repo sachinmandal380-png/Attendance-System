@@ -483,7 +483,13 @@ async function renderPeople(main, kind) {
   const title = isStudent ? "Students" : "Teachers";
 
   main.innerHTML = `
-    <div class="topbar"><h2>${title}</h2><button class="btn btn-primary" id="btn-add" style="width:auto;padding:11px 18px;">+ Add ${isStudent ? "Student" : "Teacher"}</button></div>
+   <div class="topbar">
+  <h2>${title}</h2>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    ${isStudent ? '<button class="btn btn-secondary" id="btn-export-csv" type="button" style="width:auto;">Export CSV</button>' : ""}
+    <button class="btn btn-primary" id="btn-add" style="width:auto;padding:11px 18px;">+ Add ${isStudent ? "Student" : "Teacher"}</button>
+  </div>
+</div>
     <div class="panel">  
 <div class="filters">
   <input type="text" id="search" placeholder="Search by name or ID" />
@@ -522,7 +528,7 @@ async function renderPeople(main, kind) {
         timingStates = Object.fromEntries(results);
       }
       table.innerHTML = `
-        <table><thead><tr><th>${idLabel}</th><th>Name</th><th>Mobile</th><th>Email</th><th>Status</th>${isStudent ? "<th>Attendance Schedule</th><th>Today's Timing Status</th>" : ""}<th></th></tr></thead>
+        <table><thead><tr><th>${idLabel}</th><th>Name</th><th>Mobile</th><th>Email</th>${isStudent ? "<th>Senior Name</th>" : ""}<th>Status</th>${isStudent ? "<th>Attendance Schedule</th><th>Today's Timing Status</th>" : ""}<th></th></tr></thead>
         <tbody>${rows.map((r) => {
           const ts = isStudent ? timingStates[r[idField]] : null;
           const schedule = isStudent
@@ -540,8 +546,9 @@ async function renderPeople(main, kind) {
             <td>${escapeHtml(r[idField])}</td>
             <td>${escapeHtml(r.fullName)}</td>
             <td>${escapeHtml(r.mobileNumber)}</td>
-            <td>${escapeHtml(r.email || "-")}</td>
-            <td><span class="status-pill ${r.status}">${r.status}</span></td>
+          <td>${escapeHtml(r.email || "-")}</td>
+${isStudent ? `<td>${escapeHtml(r.seniorName || "-")}</td>` : ""}
+<td><span class="status-pill ${r.status}">${r.status}</span></td>
             ${isStudent ? `<td>${escapeHtml(schedule)}</td><td>${timingCell}</td>` : ""}
             <td class="row-actions">
               <button data-act="edit" data-id="${escapeHtml(r[idField])}">Edit</button>
@@ -598,7 +605,59 @@ document.getElementById("search").onkeydown = (e) => {
 
 document.getElementById("btn-add").onclick = () =>
   openPersonModal(kind, endpoint, idField, null);
+if (isStudent) {
+  document.getElementById("btn-export-csv").onclick = async () => {
+    try {
+      const q = document.getElementById("search").value.trim();
+      const st = document.getElementById("statusFilter").value;
+      const email = document.getElementById("emailFilter").value.trim();
 
+      const params = new URLSearchParams();
+      if (q) params.set("search", q);
+      if (st) params.set("status", st);
+      if (email) params.set("email", email);
+
+      const data = await apiFetch(`/api/students?${params.toString()}`);
+      const rows = data.students || [];
+
+      const columns = [
+        ["Student ID", "studentId"],
+        ["Name", "fullName"],
+        ["Mobile", "mobileNumber"],
+        ["Email", "email"],
+        ["Senior Name", "seniorName"],
+        ["Status", "status"],
+        ["Attendance Start Time", "attendanceStartTime"],
+      ];
+
+      const csvCell = (value) => {
+        let text = String(value ?? "");
+        if (/^[=+\-@]/.test(text)) text = "'" + text;
+        return `"${text.replace(/"/g, '""')}"`;
+      };
+
+      const csv = [
+        columns.map(([label]) => csvCell(label)).join(","),
+        ...rows.map((r) =>
+          columns.map(([, key]) => csvCell(r[key])).join(",")
+        ),
+      ].join("\r\n");
+
+      const blob = new Blob(["\uFEFF" + csv], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "students.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast("Students CSV exported successfully.", "success");
+    } catch (e) {
+      if (!handleAuthError(e)) toast(e.message, "error");
+    }
+  };
+}
 load();
 }
 
@@ -644,6 +703,16 @@ function openPersonModal(kind, endpoint, idField, existing) {
           <label>Email (optional)</label>
           <input type="text" id="m-email" value="${existing ? escapeHtml(existing.email || "") : ""}" />
         </div>
+        ${isStudent ? `<div>
+  <label>Senior Name</label>
+  <input
+    type="text"
+    id="m-senior-name"
+    maxlength="255"
+    placeholder="Enter senior name"
+    value="${existing ? escapeHtml(existing.seniorName || "") : ""}"
+  />
+</div>` : ""}
         ${isStudent ? `<div>
           <label>Attendance Start Time</label>
           <input
@@ -711,6 +780,10 @@ backdrop.querySelector("#m-save").onclick = async () => {
       mobileNumber: backdrop.querySelector("#m-mobile").value.trim(),
       email: backdrop.querySelector("#m-email").value.trim(),
     };
+   if (isStudent) {
+  payload.seniorName =
+    backdrop.querySelector("#m-senior-name").value.trim() || null;
+}
 
     if (isStudent) {
       const slotInput = backdrop.querySelector("#m-attendance-start").value.trim();
