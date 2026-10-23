@@ -12,7 +12,7 @@ export async function listStudents(req: Request, res: Response) {
   const search = (req.query.search as string | undefined)?.trim();
   const status = req.query.status as string | undefined;
   const email = (req.query.email as string | undefined)?.trim();
-
+  const seniorName = (req.query.seniorName as string | undefined)?.trim();
   const conditions = [];
 
   if (search) {
@@ -32,6 +32,10 @@ export async function listStudents(req: Request, res: Response) {
     conditions.push(ilike(students.email, `%${email}%`));
   }
 
+  if (seniorName) {
+  conditions.push(ilike(students.seniorName, `%${seniorName}%`));
+}
+  
   const rows = await db
     .select()
     .from(students)
