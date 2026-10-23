@@ -494,6 +494,7 @@ async function renderPeople(main, kind) {
 <div class="filters">
   <input type="text" id="search" placeholder="Search by name or ID" />
   ${isStudent ? '<input type="email" id="emailFilter" placeholder="Search by email" />' : ""}
+  ${isStudent ? '<input type="text" id="seniorNameFilter" placeholder="Search by senior name" />' : ""}
   <select id="statusFilter">
     <option value="">All statuses</option>
     <option value="ACTIVE">Active</option>
@@ -510,10 +511,14 @@ async function renderPeople(main, kind) {
     const email = isStudent
   ? document.getElementById("emailFilter").value.trim()
   : "";
+    const seniorName = isStudent
+  ? document.getElementById("seniorNameFilter").value.trim()
+  : "";
     const params = new URLSearchParams();
     if (q) params.set("search", q);
     if (st) params.set("status", st);
     if (email) params.set("email", email);
+    if (seniorName) params.set("seniorName", seniorName);
     try {
       const data = await apiFetch(`${endpoint}?${params.toString()}`);
       const rows = data[isStudent ? "students" : "teachers"];
@@ -598,7 +603,11 @@ if (isStudent) {
     if (e.key === "Enter") load();
   };
 }
+document.getElementById("seniorNameFilter").oninput = debounce(load, 300);
 
+document.getElementById("seniorNameFilter").onkeydown = (e) => {
+  if (e.key === "Enter") load();
+};
 document.getElementById("search").onkeydown = (e) => {
   if (e.key === "Enter") load();
 };
