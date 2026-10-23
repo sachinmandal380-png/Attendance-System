@@ -472,7 +472,16 @@ async function renderDashboard(main) {
     }
   }
 }
-
+async function renderNotifications(main) {
+  main.innerHTML = `
+    <div class="topbar">
+      <h2>Notifications</h2>
+    </div>
+    <div class="panel">
+      <p>Notifications page is working.</p>
+    </div>
+  `;
+}
 
 /* ---- Students / Teachers management (shared logic, `kind` = 'student' | 'teacher') ---- */
 async function renderPeople(main, kind) {
