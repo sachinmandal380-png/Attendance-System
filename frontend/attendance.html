@@ -472,16 +472,89 @@ async function renderDashboard(main) {
     }
   }
 }
+
 async function renderNotifications(main) {
   main.innerHTML = `
     <div class="topbar">
       <h2>Notifications</h2>
     </div>
     <div class="panel">
-      <p>Notifications page is working.</p>
+      <h3>⚠️ Missing OUT Notifications</h3>
+      <div id="notifications-content">Loading...</div>
     </div>
   `;
+
+  try {
+    const data = await apiFetch("/api/dashboard/notifications");
+    const content = document.getElementById("notifications-content");
+
+    if (!content) return;
+
+    const notifications = Array.isArray(data.notifications)
+      ? data.notifications
+      : [];
+
+    content.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>ID</th>
+              <th>Date</th>
+              <th>IN Time</th>
+              <th>Expected OUT</th>
+              <th>Actual OUT</th>
+              <th>Status</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              notifications.length
+                ? notifications.map((n) => `
+                    <tr>
+                      <td>${escapeHtml(n.personName ?? "")}</td>
+                      <td>${escapeHtml(n.personId ?? "")}</td>
+                      <td>${escapeHtml(n.attendanceDate ?? "")}</td>
+                      <td>${escapeHtml(n.inTime ?? "")}</td>
+                      <td>${escapeHtml(n.expectedOutTime ?? "")}</td>
+                      <td>${n.actualOutTime
+                        ? escapeHtml(n.actualOutTime)
+                        : "Not marked"}</td>
+                      <td>${n.actualOutTime || n.status === "RESOLVED"
+                        ? "Resolved"
+                        : "Pending"}</td>
+                      <td>${escapeHtml(n.message ?? "")}</td>
+                    </tr>
+                  `).join("")
+                : `
+                    <tr>
+                      <td colspan="8" class="empty-state">
+                        No notifications found.
+                      </td>
+                    </tr>
+                  `
+            }
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    if (!handleAuthError(e)) {
+      const content = document.getElementById("notifications-content");
+
+      if (content) {
+        content.innerHTML = `
+          <div class="alert alert-error">
+            ${escapeHtml(e.message)}
+          </div>
+        `;
+      }
+    }
+  }
 }
+
 
 /* ---- Students / Teachers management (shared logic, `kind` = 'student' | 'teacher') ---- */
 async function renderPeople(main, kind) {
